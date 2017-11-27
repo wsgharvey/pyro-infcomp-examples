@@ -63,11 +63,14 @@ class Gaussian(nn.Module):
         x = F.relu(self.fcn2(x))
         x = F.relu(self.fcn3(x))
         x = F.relu(self.fcn4(x))
-        x = F.relu(self.fcn5(x))
+        x = self.fcn5(x)
         x = x.view(2)
+
         proposal_mean = x[0]
+
         log_proposal_var = x[1]
         proposal_var = log_proposal_var.exp()
+
         pyro.sample("latent",
                     dist.normal,
                     proposal_mean,
@@ -81,5 +84,6 @@ gaussian = Gaussian(prior_mean=Variable(torch.Tensor([0])),
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
                   optim=torch.optim.Adam)
+
 csis.compile(num_steps=1000,
              num_particles=10)
