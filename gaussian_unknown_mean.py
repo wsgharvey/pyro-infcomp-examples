@@ -66,7 +66,8 @@ class Gaussian(nn.Module):
         x = F.relu(self.fcn5(x))
         x = x.view(2)
         proposal_mean = x[0]
-        proposal_var = x[1]
+        log_proposal_var = x[1]
+        proposal_var = log_proposal_var.exp()
         pyro.sample("latent",
                     dist.normal,
                     proposal_mean,
