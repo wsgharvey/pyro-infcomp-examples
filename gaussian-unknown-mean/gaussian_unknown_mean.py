@@ -8,12 +8,7 @@ import pyro.infer as infer
 import pyro.optim
 import pyro.distributions as dist
 
-import matplotlib
 import matplotlib.pyplot as plt
-
-from PIL import Image
-
-import numpy as np
 
 
 class Gaussian(nn.Module):
@@ -30,7 +25,7 @@ class Gaussian(nn.Module):
         self.fcn4 = nn.Linear(10, 5)
         self.fcn5 = nn.Linear(5, 2)
 
-    def model(self, observation=Variable(torch.Tensor([0]))):
+    def model(self, observation=0):
         """
         makes a 1-D observation from a Gaussian prior under Gaussian noise
 
@@ -48,6 +43,7 @@ class Gaussian(nn.Module):
                                    obs=observation,
                                    mu=latent,
                                    sigma=self.observation_var)
+        return latent
 
     def forward(self, observation=None):
         """
@@ -81,9 +77,27 @@ gaussian = Gaussian(prior_mean=Variable(torch.Tensor([0])),
                     prior_var=Variable(torch.Tensor([1])),
                     observation_var=Variable(torch.Tensor([0.1])))
 
+num_samples = 50  # number of samples to create empirical distribution
+
+# do CSIS
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
                   optim=torch.optim.Adam)
-
 csis.compile(num_steps=1000,
              num_particles=10)
+csis_posterior = csis.get_posterior(num_samples=num_samples)
+csis_marginal = infer.Marginal(csis_posterior)
+csis_samples = [csis_marginal(observation=Variable(torch.Tensor([2.3]))).data[0] for _ in range(10000)]
+
+# do Importance sampling:
+is_posterior = infer.Importance(model=gaussian.model,
+                                num_samples=num_samples)
+is_marginal = infer.Marginal(is_posterior)
+is_samples = [is_marginal(observation=Variable(torch.Tensor([2.3]))).data[0] for _ in range(10000)]
+
+
+plt.hist(csis_samples, range=(-5, 5), bins=100, color='r', normed=1, label="Infernce Compilation")
+plt.hist(is_samples, range=(-5, 5), bins=100, color='b', normed=1, label="Importance Sampling")
+plt.legend()
+plt.title("Gaussian Unknown Mean Predictions")
+plt.savefig("plots/histogram.pdf")
