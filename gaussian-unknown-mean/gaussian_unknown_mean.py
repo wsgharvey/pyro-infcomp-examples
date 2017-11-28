@@ -12,20 +12,20 @@ import matplotlib.pyplot as plt
 
 
 class Gaussian(nn.Module):
-    def __init__(self, prior_mean, prior_var, observation_var):
+    def __init__(self, prior_mean, prior_std, observation_std):
         super(Gaussian, self).__init__()
         self.prior_mean = prior_mean
-        self.prior_var = prior_var
-        self.observation_var = observation_var
+        self.prior_std = prior_std
+        self.observation_std = observation_std
 
         # set up layers for guide net
-        self.fcn1 = nn.Linear(1, 10)
+        self.fcn1 = nn.Linear(2, 10)
         self.fcn2 = nn.Linear(10, 20)
         self.fcn3 = nn.Linear(20, 10)
         self.fcn4 = nn.Linear(10, 5)
         self.fcn5 = nn.Linear(5, 2)
 
-    def model(self, observation=0):
+    def model(self, observation1=0, observation2=0):
         """
         makes a 1-D observation from a Gaussian prior under Gaussian noise
 
@@ -36,25 +36,34 @@ class Gaussian(nn.Module):
         latent = pyro.sample("latent",
                              dist.normal,
                              self.prior_mean,
-                             self.prior_var)
+                             self.prior_std)
 
-        observation = pyro.observe("observation",
-                                   dist.normal,
-                                   obs=observation,
-                                   mu=latent,
-                                   sigma=self.observation_var)
+        observation1 = pyro.observe("observation1",
+                                    dist.normal,
+                                    obs=observation1,
+                                    mu=latent,
+                                    sigma=self.observation_std)
+
+        observation2 = pyro.observe("observation2",
+                                    dist.normal,
+                                    obs=observation2,
+                                    mu=latent,
+                                    sigma=self.observation_std)
         return latent
 
-    def forward(self, observation=None):
+    def forward(self, observation1=None, observation2=None):
         """
         guide for proposal distributions
 
         takes same arguments as the model
         """
         # observation should always be given a non-default values
-        assert observation is not None
+        assert observation1 is not None
+        assert observation2 is not None
 
-        x = observation.view(-1, 1)
+        observation1 = observation1.view(1, 1)
+        observation2 = observation2.view(1, 1)
+        x = torch.cat((observation1, observation2), 1)
         x = F.relu(self.fcn1(x))
         x = F.relu(self.fcn2(x))
         x = F.relu(self.fcn3(x))
@@ -64,18 +73,18 @@ class Gaussian(nn.Module):
 
         proposal_mean = x[0]
 
-        log_proposal_var = x[1]
-        proposal_var = log_proposal_var.exp()
+        log_proposal_std = x[1]
+        proposal_std = log_proposal_std.exp()
 
         pyro.sample("latent",
                     dist.normal,
                     proposal_mean,
-                    proposal_var)
+                    proposal_std)
 
 
-gaussian = Gaussian(prior_mean=Variable(torch.Tensor([0])),
-                    prior_var=Variable(torch.Tensor([1])),
-                    observation_var=Variable(torch.Tensor([0.1])))
+gaussian = Gaussian(prior_mean=Variable(torch.Tensor([1])),
+                    prior_std=Variable(torch.Tensor([5**0.5])),
+                    observation_std=Variable(torch.Tensor([2**0.5])))
 
 num_samples = 50  # number of samples to create empirical distribution
 
@@ -83,20 +92,22 @@ num_samples = 50  # number of samples to create empirical distribution
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
                   optim=torch.optim.Adam)
-csis.compile(num_steps=1000,
+csis.compile(num_steps=5000,
              num_particles=10)
 csis_posterior = csis.get_posterior(num_samples=num_samples)
 csis_marginal = infer.Marginal(csis_posterior)
-csis_samples = [csis_marginal(observation=Variable(torch.Tensor([2.3]))).data[0] for _ in range(10000)]
+csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),
+                              observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
 # do Importance sampling:
 is_posterior = infer.Importance(model=gaussian.model,
                                 num_samples=num_samples)
 is_marginal = infer.Marginal(is_posterior)
-is_samples = [is_marginal(observation=Variable(torch.Tensor([2.3]))).data[0] for _ in range(10000)]
+is_samples = [is_marginal(observation1=Variable(torch.Tensor([8])),
+                          observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
 
-plt.hist(csis_samples, range=(-5, 5), bins=100, color='r', normed=1, label="Infernce Compilation")
+plt.hist(csis_samples, range=(-5, 5), bins=100, color='r', normed=1, label="Inference Compilation")
 plt.hist(is_samples, range=(-5, 5), bins=100, color='b', normed=1, label="Importance Sampling")
 plt.legend()
 plt.title("Gaussian Unknown Mean Predictions")
