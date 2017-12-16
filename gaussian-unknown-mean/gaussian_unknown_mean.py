@@ -91,7 +91,7 @@ num_samples = 50  # number of samples to create empirical distribution
 # do CSIS
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
-                  optim=torch.optim.Adam)
+                  optim=torch.optim.Adam(gaussian.parameters(), lr=1e-4))
 csis.compile(num_steps=5000,
              num_particles=10)
 csis_posterior = csis.get_posterior(num_samples=num_samples)
