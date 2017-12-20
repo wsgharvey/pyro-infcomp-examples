@@ -92,11 +92,11 @@ num_samples = 50  # number of samples to create empirical distribution
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
                   num_samples=10)
-csis.set_model_args()
+csis.set_model_args()                       # the model has no arguments except the observes
 csis.set_compiler_args(num_particles=10)
-optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)
+optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)    # optimiser that will be used in compilation
 csis.compile(optim, num_steps=500)
-csis_marginal = infer.Marginal(csis)
+csis_marginal = infer.Marginal(csis)                        # draws weighted traces using Pyro's built-in importance sampling
 csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),
                               observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
