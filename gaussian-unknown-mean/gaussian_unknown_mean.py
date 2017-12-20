@@ -8,6 +8,8 @@ import pyro.infer as infer
 import pyro.optim
 import pyro.distributions as dist
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 
 
@@ -95,7 +97,7 @@ csis = infer.CSIS(model=gaussian.model,
 csis.set_model_args()                       # the model has no arguments except the observes
 csis.set_compiler_args(num_particles=10)
 optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)    # optimiser that will be used in compilation
-csis.compile(optim, num_steps=500)
+csis.compile(optim, num_steps=2000)
 csis_marginal = infer.Marginal(csis)                        # draws weighted traces using Pyro's built-in importance sampling
 csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),
                               observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
@@ -107,9 +109,12 @@ is_marginal = infer.Marginal(is_posterior)
 is_samples = [is_marginal(observation1=Variable(torch.Tensor([8])),
                           observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
+true_samples = [np.random.normal(7.25, (5/6)**0.5) for _ in range(10000)]
+
 
 plt.hist(csis_samples, range=(-10, 10), bins=100, color='r', normed=1, label="Inference Compilation")
 plt.hist(is_samples, range=(-10, 10), bins=100, color='b', normed=1, label="Importance Sampling")
+plt.hist(true_samples, range=(-10, 10), bins=100, color='g', normed=1, label="Truth")
 plt.legend()
 plt.title("Gaussian Unknown Mean Predictions")
 plt.savefig("plots/histogram.pdf")
