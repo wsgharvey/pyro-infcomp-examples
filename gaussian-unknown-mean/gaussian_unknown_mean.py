@@ -91,11 +91,12 @@ num_samples = 50  # number of samples to create empirical distribution
 # do CSIS
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
-                  optim=torch.optim.Adam(gaussian.parameters(), lr=1e-4))
-csis.compile(num_steps=5000,
-             num_particles=10)
-csis_posterior = csis.get_posterior(num_samples=num_samples)
-csis_marginal = infer.Marginal(csis_posterior)
+                  num_samples=10)
+csis.set_model_args()
+csis.set_compiler_args(num_particles=10)
+optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)
+csis.compile(optim, num_steps=500)
+csis_marginal = infer.Marginal(csis)
 csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),
                               observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
@@ -107,8 +108,8 @@ is_samples = [is_marginal(observation1=Variable(torch.Tensor([8])),
                           observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
 
-plt.hist(csis_samples, range=(-5, 5), bins=100, color='r', normed=1, label="Inference Compilation")
-plt.hist(is_samples, range=(-5, 5), bins=100, color='b', normed=1, label="Importance Sampling")
+plt.hist(csis_samples, range=(-10, 10), bins=100, color='r', normed=1, label="Inference Compilation")
+plt.hist(is_samples, range=(-10, 10), bins=100, color='b', normed=1, label="Importance Sampling")
 plt.legend()
 plt.title("Gaussian Unknown Mean Predictions")
 plt.savefig("plots/histogram.pdf")
