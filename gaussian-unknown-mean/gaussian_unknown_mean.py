@@ -93,7 +93,7 @@ num_samples = 50  # number of samples to create empirical distribution
 # do CSIS
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
-                  num_samples=10)
+                  num_samples=num_samples)
 csis.set_model_args()                       # the model has no arguments except the observes
 csis.set_compiler_args(num_particles=10)
 optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)    # optimiser that will be used in compilation
