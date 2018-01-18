@@ -100,7 +100,7 @@ csis.set_compiler_args(num_particles=10)
 optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)                        # optimiser that will be used in compilation
 csis.compile(optim, num_steps=2000)
 # from here we use csis just like a pyro.infer.Importance object (see http://pyro.ai/examples/intro_part_ii.html)
-csis_marginal = infer.Marginal(csis)                                            # approximate the posterior by drawing weighted traces using Pyro's built-in importance sampling
+csis_marginal = infer.Marginal(csis)                                            # approximate the posterior by drawing weighted traces using Pyro's built-in importance sampling (they call this marginal in the docs but it seems like a posterior to me)
 csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),         # draw samples from the approximate posterior to plot a histogram
                               observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
