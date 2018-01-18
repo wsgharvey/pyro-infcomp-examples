@@ -27,7 +27,7 @@ class Gaussian(nn.Module):
         self.fcn4 = nn.Linear(10, 5)
         self.fcn5 = nn.Linear(5, 2)
 
-    def model(self, observation1=0, observation2=0):
+    def model(self, observation1=0, observation2=0):    # the names of observed variables are given as keyword arguments (the default value given is unimportant)
         """
         makes a 1-D observation from a Gaussian prior under Gaussian noise
 
@@ -90,19 +90,22 @@ gaussian = Gaussian(prior_mean=Variable(torch.Tensor([1])),
 
 num_samples = 50  # number of samples to create empirical distribution
 
-# do CSIS
+
+# do compilation and infer with CSIS
 csis = infer.CSIS(model=gaussian.model,
                   guide=gaussian,
                   num_samples=num_samples)
-csis.set_model_args()                       # the model has no arguments except the observes
+csis.set_model_args()                                                           # set arguments (but the model has no arguments except the observes so set_model_args is called with no arguments)
 csis.set_compiler_args(num_particles=10)
-optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)    # optimiser that will be used in compilation
+optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)                        # optimiser that will be used in compilation
 csis.compile(optim, num_steps=2000)
-csis_marginal = infer.Marginal(csis)                        # draws weighted traces using Pyro's built-in importance sampling
-csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),
+# from here we use csis just like a pyro.infer.Importance object (see http://pyro.ai/examples/intro_part_ii.html)
+csis_marginal = infer.Marginal(csis)                                            # approximate the posterior by drawing weighted traces using Pyro's built-in importance sampling
+csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),         # draw samples from the approximate posterior to plot a histogram
                               observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
-# do Importance sampling:
+
+# do Importance sampling as a baseline:
 is_posterior = infer.Importance(model=gaussian.model,
                                 num_samples=num_samples)
 is_marginal = infer.Marginal(is_posterior)
