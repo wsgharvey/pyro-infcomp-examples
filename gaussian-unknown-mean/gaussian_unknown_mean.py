@@ -9,7 +9,7 @@ import pyro.optim
 import pyro.distributions as dist
 
 import numpy as np
-
+import scipy.stats
 import matplotlib.pyplot as plt
 
 
@@ -52,6 +52,32 @@ class Gaussian(nn.Module):
                                     mu=latent,
                                     sigma=self.observation_std)
         return latent
+
+        def model(self, observation1=0, observation2=0):    # the names of observed variables are given as keyword arguments (the default value given is unimportant)
+            """
+            makes a 1-D observation from a Gaussian prior under Gaussian noise
+
+            - note that observation is fed in as keyword argument with same name
+            - also note that the default value of observation cannot be None or it
+              will see the observe as a sample
+            """
+            latent = pyro.sample("latent",
+                                 dist.normal,
+                                 self.prior_mean,
+                                 self.prior_std)
+
+            observation1 = pyro.observe("observation1",
+                                        dist.normal,
+                                        obs=observation1,
+                                        mu=latent,
+                                        sigma=self.observation_std)
+
+            observation2 = pyro.observe("observation2",
+                                        dist.normal,
+                                        obs=observation2,
+                                        mu=latent,
+                                        sigma=self.observation_std)
+            return latent
 
     def forward(self, observation1=None, observation2=None):
         """
@@ -98,7 +124,7 @@ csis = infer.CSIS(model=gaussian.model,
 csis.set_model_args()                                                           # set arguments (but the model has no arguments except the observes so set_model_args is called with no arguments)
 csis.set_compiler_args(num_particles=10)
 optim = torch.optim.Adam(gaussian.parameters(), lr=1e-3)                        # optimiser that will be used in compilation
-csis.compile(optim, num_steps=2000)
+csis.compile(num_steps=2000, optim=optim)
 # from here we use csis just like a pyro.infer.Importance object (see http://pyro.ai/examples/intro_part_ii.html)
 csis_marginal = infer.Marginal(csis)                                            # approximate the posterior by drawing weighted traces using Pyro's built-in importance sampling (they call this marginal in the docs but it seems like a posterior to me)
 csis_samples = [csis_marginal(observation1=Variable(torch.Tensor([8])),         # draw samples from the approximate posterior to plot a histogram
@@ -112,12 +138,14 @@ is_marginal = infer.Marginal(is_posterior)
 is_samples = [is_marginal(observation1=Variable(torch.Tensor([8])),
                           observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
-true_samples = [np.random.normal(7.25, (5/6)**0.5) for _ in range(10000)]
-
+# true_samples = [np.random.normal(7.25, (5/6)**0.5) for _ in range(10000)]
+true_posterior_x = np.arange(-10, 10, 0.05)
+true_posterior_y = np.array([np.exp(scipy.stats.norm.logpdf(x, loc=7.25, scale=(5/6)**0.5)) for x in true_posterior_x])
 
 plt.hist(csis_samples, range=(-10, 10), bins=100, color='r', normed=1, label="Inference Compilation")
 plt.hist(is_samples, range=(-10, 10), bins=100, color='b', normed=1, label="Importance Sampling")
-plt.hist(true_samples, range=(-10, 10), bins=100, color='g', normed=1, label="Truth")
+plt.plot(true_posterior_x, true_posterior_y, color='k', label='Analytic Posterior')
+# plt.hist(true_samples, range=(-10, 10), bins=100, color='g', normed=1, label="Truth")
 plt.legend()
 plt.title("Gaussian Unknown Mean Predictions")
 plt.savefig("plots/histogram.pdf")
