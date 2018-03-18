@@ -138,14 +138,13 @@ is_marginal = infer.Marginal(is_posterior)
 is_samples = [is_marginal(observation1=Variable(torch.Tensor([8])),
                           observation2=Variable(torch.Tensor([9]))).data[0] for _ in range(10000)]
 
-# true_samples = [np.random.normal(7.25, (5/6)**0.5) for _ in range(10000)]
 true_posterior_x = np.arange(-10, 10, 0.05)
 true_posterior_y = np.array([np.exp(scipy.stats.norm.logpdf(x, loc=7.25, scale=(5/6)**0.5)) for x in true_posterior_x])
 
 plt.hist(csis_samples, range=(-10, 10), bins=100, color='r', normed=1, label="Inference Compilation")
 plt.hist(is_samples, range=(-10, 10), bins=100, color='b', normed=1, label="Importance Sampling")
 plt.plot(true_posterior_x, true_posterior_y, color='k', label='Analytic Posterior')
-# plt.hist(true_samples, range=(-10, 10), bins=100, color='g', normed=1, label="Truth")
+plt.xlim(-10, 10)
 plt.legend()
 plt.title("Gaussian Unknown Mean Predictions")
 plt.savefig("plots/histogram.pdf")
