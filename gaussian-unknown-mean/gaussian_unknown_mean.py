@@ -140,11 +140,18 @@ is_samples = [is_marginal(observation1=Variable(torch.Tensor([8])),
 
 true_posterior_x = np.arange(-10, 10, 0.05)
 true_posterior_y = np.array([np.exp(scipy.stats.norm.logpdf(x, loc=7.25, scale=(5/6)**0.5)) for x in true_posterior_x])
+prior_x = true_posterior_x
+prior_y = np.array([np.exp(scipy.stats.norm.logpdf(x, loc=1, scale=5**0.5)) for x in true_posterior_x])
 
+fig, ax = plt.subplots()
+plt.plot(prior_x, prior_y, 'k--', label='Prior')
+# plt.scatter([8, 9], [0, 0], marker='X', color='k', s=50, label='Observations')
+plt.plot(true_posterior_x, true_posterior_y, color='k', label='Analytic Posterior')
 plt.hist(csis_samples, range=(-10, 10), bins=100, color='r', normed=1, label="Inference Compilation")
 plt.hist(is_samples, range=(-10, 10), bins=100, color='b', normed=1, label="Importance Sampling")
-plt.plot(true_posterior_x, true_posterior_y, color='k', label='Analytic Posterior')
-plt.xlim(-10, 10)
+plt.xlim(-8, 10)
+plt.ylim(0, 5)
+plt.xlabel("Value of Latent Variable")
+plt.ylabel("Estimated Posterior Probability Density")
 plt.legend()
-plt.title("Gaussian Unknown Mean Predictions")
 plt.savefig("plots/histogram.pdf")
