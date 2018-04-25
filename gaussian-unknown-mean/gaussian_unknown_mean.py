@@ -61,6 +61,7 @@ class Gaussian(nn.Module):
             - also note that the default value of observation cannot be None or it
               will see the observe as a sample
             """
+
             latent = pyro.sample("latent",
                                  dist.normal,
                                  self.prior_mean,
@@ -99,9 +100,9 @@ class Gaussian(nn.Module):
         x = self.fcn5(x)
         x = x.view(2)
 
-        proposal_mean = x[0]
+        proposal_mean = x[:1]
 
-        log_proposal_std = x[1]
+        log_proposal_std = x[1:]
         proposal_std = log_proposal_std.exp()
 
         pyro.sample("latent",
